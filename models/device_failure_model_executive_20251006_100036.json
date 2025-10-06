@@ -1,0 +1,61 @@
+{
+  "timestamp": "20251006_100036",
+  "model_name": "device_failure_model",
+  "best_model": "XGBoost",
+  "performance_summary": {
+    "auc": 0.7659669044658245,
+    "ap": 0.12259488833206283,
+    "precision": 0.3157894736842105,
+    "recall": 0.05714285714285714,
+    "f1": 0.0967741935483871,
+    "cost": 116.0,
+    "threshold": 0.3,
+    "metrics_source": "holdout",
+    "total_features": 80,
+    "suspicious_features": 1
+  },
+  "final_test_results": {
+    "model_name": "XGBoost",
+    "threshold": 0.3,
+    "business_metrics": {
+      "model": "XGBoost",
+      "auc_pr": 0.12259488833206283,
+      "recall_h": 0.15151515151515152,
+      "alert_rate": 0.001610305958132045,
+      "cost": "116",
+      "economy": "16",
+      "tps_avoided": "5",
+      "fps_generated": "4",
+      "fns_remaining": "28",
+      "confusion_matrix": [
+        [
+          "5552",
+          "4"
+        ],
+        [
+          "28",
+          "5"
+        ]
+      ]
+    },
+    "business_metrics_event": {
+      "tp_events": 1,
+      "fn_events": 2,
+      "fp_alerts": 4,
+      "roi_abs": 0,
+      "roi_pct": 0.0,
+      "precision_event": 0.2,
+      "recall_event": 0.3333333333333333
+    },
+    "test_data_info": {
+      "total_samples": 5589,
+      "positive_samples": 33,
+      "negative_samples": 5556,
+      "positive_rate": 0.005904455179817499
+    }
+  },
+  "file_paths": {
+    "model": "models\\device_failure_model_xgboost_20251006_100036.pkl",
+    "metrics": "models\\device_failure_model_metrics_20251006_100036.json"
+  }
+}
