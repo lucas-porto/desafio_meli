@@ -25,7 +25,7 @@ def find_threshold_for_rate(p, target_rate):
     ps = np.sort(np.unique(p))
     lo, hi = 0, len(ps) - 1
     best = ps[hi]
-    
+
     while lo <= hi:
         mid = (lo + hi) // 2
         thr = float(ps[mid])
@@ -98,7 +98,7 @@ def tune_budget_simple(
         # Aplicar threshold
         cost, cm_tuple, preds = cost_simple(y_val, p_val, thr)
         pr = precision_score(y_val, preds, zero_division=0)
-        
+
         if pr >= min_precision and cost < best_cost:
             best_cost = cost
             tn, fp, fn, tp = cm_tuple

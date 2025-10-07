@@ -77,6 +77,7 @@ def pick_threshold_with_budget(y_val, p_val, fn_cost=4, fp_cost=1, max_alert_rat
     else:
         return best_cost_thr, best_cost_alert_rate, "cost_optimal"
 
+
 def apply_undersampling(X, y, random_state=42, neg_per_pos=50, max_neg_cap=None):
     """
     Aplicar undersampling balanceado com controle de taxa neg/pos e cap opcional.
@@ -115,7 +116,7 @@ def apply_undersampling(X, y, random_state=42, neg_per_pos=50, max_neg_cap=None)
 
         # Combinar positivos e negativos amostrados
         keep_idx = np.concatenate([pos_idx, sampled_neg_idx])
-        
+
         # Selecionar dados mantendo ordem temporal
         if isinstance(X, pd.DataFrame):
             X_bal = X.iloc[keep_idx]
@@ -375,9 +376,7 @@ def create_pipeline_with_metadata(df_features, target_col="failure"):
     )
 
 
-def temporal_cv_evaluation(
-    df_features, target_col="failure", n_splits=3, purge_days=7
-):
+def temporal_cv_evaluation(df_features, target_col="failure", n_splits=3, purge_days=7):
     """
     Validação cruzada temporal com purge (sem cooldown)
     """
@@ -501,13 +500,13 @@ def load_saved_model(models_path, model_name=None):
         Dicionário com os modelos carregados
     """
     import pickle
-    
-    with open(models_path, 'rb') as f:
+
+    with open(models_path, "rb") as f:
         models = pickle.load(f)
-    
+
     if model_name is not None:
         return models.get(model_name)
-    
+
     return models
 
 
@@ -522,8 +521,8 @@ def load_metrics(metrics_path):
         Dicionário com as métricas carregadas
     """
     import json
-    
-    with open(metrics_path, 'r') as f:
+
+    with open(metrics_path, "r") as f:
         metrics = json.load(f)
-    
+
     return metrics

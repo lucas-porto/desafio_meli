@@ -4,7 +4,6 @@ Módulo para feature engineering e análise de features
 
 import numpy as np
 import pandas as pd
-from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import (
     f_classif,
     mutual_info_classif,
@@ -270,7 +269,6 @@ def create_features(
             df_feat[f"{colz}_gt2sigma"] = (df_feat[colz] > 2).astype("uint8")
             df_feat[f"{colz}_lt-2sigma"] = (df_feat[colz] < -2).astype("uint8")
 
-
     # 9. CRIAÇÃO DA TARGET - HORIZONTE DE PREVISÃO
     print(f"9. Criando target com horizonte de {forecast_horizon} dias...")
     df_feat, new_target_col = make_early_warning_labels_safe(
@@ -345,7 +343,7 @@ def analyze_feature_correlations(X, y, corr_threshold=0.95, target_threshold=0.0
     """
     Análise de correlações entre features e com target
     """
- 
+
     corr = X.corr().abs()
     upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
     to_drop = [c for c in upper.columns if any(upper[c] > corr_threshold)]

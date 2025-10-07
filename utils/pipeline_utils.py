@@ -6,22 +6,18 @@ import warnings
 import pickle
 import json
 import os
-import math
 from datetime import datetime
-from scipy.stats import ks_2samp
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
 import xgboost as xgb
 from sklearn.metrics import (
     average_precision_score,
-    confusion_matrix,
     f1_score,
     precision_score,
     recall_score,
     roc_auc_score,
 )
-from sklearn.isotonic import IsotonicRegression
 
 
 from .model_utils import (
@@ -39,17 +35,12 @@ from .alert_utils import (
 )
 from .business_utils import (
     business_roi_event_based,
-    business_roi,
     cm_safe,
-    subset_events,
-    break_even_analysis,
-    break_even_analysis_event_based,
     compare_models,
     calculate_business_metrics,
 )
 
 warnings.filterwarnings("ignore")
-
 
 
 def pick_threshold_min_precision(
@@ -78,6 +69,7 @@ def pick_threshold_min_precision(
     # fallback: o de maior precisão alcançada (ainda que < min_precision)
     preds = apply_simple_threshold(p_val, thr=best_t)
     return best_t, float(preds.mean())
+
 
 def tune_neg_per_pos(
     X_train,
@@ -153,7 +145,6 @@ def tune_neg_per_pos(
         f"[tuner] melhor neg_per_pos={best['neg_per_pos']} | custo_val={best['cost']:.1f} | thr_val={best['thr']:.3f} | alertas={best['alert_rate']:.1%}"
     )
     return best
-
 
 
 def train_evaluate_with_presplit(
@@ -434,7 +425,7 @@ def train_evaluate_with_presplit(
     holdout_predictions = {}
     if X_val_hold is not None:
         print("Calculando predições de holdout durante o treinamento...")
-        
+
         # XGBoost holdout
         xgb_proba_hold = xgb_model.predict_proba(X_val_hold)[:, 1]
         if calibrate and xgb_cals is not None:
@@ -442,7 +433,7 @@ def train_evaluate_with_presplit(
             xgb_proba_hold = np.mean(cal_preds, axis=0)
         xgb_pred_hold = apply_simple_threshold(xgb_proba_hold, xgb_thr)
         holdout_predictions["XGBoost"] = xgb_pred_hold
-        
+
         # LightGBM holdout
         lgb_proba_hold = lgb_model.predict_proba(X_val_hold)[:, 1]
         if calibrate and lgb_cals is not None:
@@ -450,12 +441,14 @@ def train_evaluate_with_presplit(
             lgb_proba_hold = np.mean(cal_preds, axis=0)
         lgb_pred_hold = apply_simple_threshold(lgb_proba_hold, lgb_thr)
         holdout_predictions["LightGBM"] = lgb_pred_hold
-        
+
         # Ensemble holdout
         w_xgb = xgb_ap + 1e-9
         w_lgb = lgb_ap + 1e-9
         w_sum = w_xgb + w_lgb
-        ensemble_proba_hold = (w_xgb / w_sum) * xgb_proba_hold + (w_lgb / w_sum) * lgb_proba_hold
+        ensemble_proba_hold = (w_xgb / w_sum) * xgb_proba_hold + (
+            w_lgb / w_sum
+        ) * lgb_proba_hold
         ensemble_pred_hold = apply_simple_threshold(ensemble_proba_hold, ensemble_thr)
         holdout_predictions["EnsembleAvg"] = ensemble_pred_hold
 
@@ -491,8 +484,8 @@ def train_evaluate_with_presplit(
         },
         "EnsembleAvg": {
             "model": None,
-            "xgb_model": xgb_model,  # Modelo XGBoost 
-            "lgb_model": lgb_model,  # Modelo LightGBM 
+            "xgb_model": xgb_model,  # Modelo XGBoost
+            "lgb_model": lgb_model,  # Modelo LightGBM
             "xgb_calibrator": xgb_cals if calibrate else None,  # Calibrador XGBoost
             "lgb_calibrator": lgb_cals if calibrate else None,  # Calibrador LightGBM
             "probabilities": ensemble_p_test,
@@ -766,25 +759,24 @@ def calculate_event_metrics(
 def select_best_model(models_results, y_val_hold):
     """
     Seleciona o melhor modelo baseado na performance no conjunto de holdout.
-    
+
     Args:
         models_results: Dicionário com resultados dos modelos
         y_val_hold: Labels do conjunto de holdout
-        
+
     Returns:
         tuple: (best_model_name, best_model_results, comparison_df)
     """
     print(f"\n{'=' * 60}")
     print("SELEÇÃO DO MELHOR MODELO (VALIDAÇÃO HOLDOUT)")
     print(f"{'=' * 60}")
-    
+
     # Comparar modelos usando dados de holdout
     comparison_df = compare_models(models_results, y_val_hold, use_holdout=True)
 
     # Selecionar o melhor modelo (primeiro da lista ordenada)
     best_model_name = comparison_df.iloc[0]["Modelo"]
     best_model_results = models_results[best_model_name]
-
 
     if "predictions_hold" in best_model_results:
         preds_hold = best_model_results["predictions_hold"]
@@ -793,7 +785,7 @@ def select_best_model(models_results, y_val_hold):
             precision_hold = precision_score(y_val_hold, preds_hold, zero_division=0)
             recall_hold = recall_score(y_val_hold, preds_hold, zero_division=0)
             f1_hold = f1_score(y_val_hold, preds_hold, zero_division=0)
-            
+
             # Adicionar métricas ao best_model_results
             best_model_results["precision"] = precision_hold
             best_model_results["recall"] = recall_hold
@@ -805,7 +797,7 @@ def select_best_model(models_results, y_val_hold):
             precision_test = precision_score(y_val_hold, preds_test, zero_division=0)
             recall_test = recall_score(y_val_hold, preds_test, zero_division=0)
             f1_test = f1_score(y_val_hold, preds_test, zero_division=0)
-            
+
             best_model_results["precision"] = precision_test
             best_model_results["recall"] = recall_test
             best_model_results["f1"] = f1_test
@@ -816,7 +808,7 @@ def select_best_model(models_results, y_val_hold):
         precision_test = precision_score(y_val_hold, preds_test, zero_division=0)
         recall_test = recall_score(y_val_hold, preds_test, zero_division=0)
         f1_test = f1_score(y_val_hold, preds_test, zero_division=0)
-        
+
         best_model_results["precision"] = precision_test
         best_model_results["recall"] = recall_test
         best_model_results["f1"] = f1_test
@@ -824,7 +816,7 @@ def select_best_model(models_results, y_val_hold):
 
     print(f"\nMELHOR MODELO SELECIONADO: {best_model_name}")
     print(f"   Custo: {best_model_results['cost']:.0f}")
-    
+
     return best_model_name, best_model_results, comparison_df
 
 
@@ -843,6 +835,7 @@ def _subset_events(original_df, dates, devices):
     df["date"] = pd.to_datetime(df["date"])
     return df
 
+
 def execute_final_model_evaluation(
     best_model_name,
     best_model_results,
@@ -857,7 +850,7 @@ def execute_final_model_evaluation(
 ):
     """
     Executa a avaliação final do melhor modelo nos dados de teste.
-    
+
     Args:
         best_model_name: Nome do melhor modelo selecionado
         best_model_results: Resultados do melhor modelo
@@ -867,7 +860,7 @@ def execute_final_model_evaluation(
         devices_test: Dispositivos de teste
         df: DataFrame original
         horizon_days: Horizonte de predição
-        
+
     Returns:
         dict: Resultados finais da avaliação
     """
@@ -994,7 +987,7 @@ def create_final_summary(
         roi_event = v.get("business_metrics_event", {}).get("roi_pct", 0)
         precision_event = v.get("business_metrics_event", {}).get("precision_event", 0)
         recall_event = v.get("business_metrics_event", {}).get("recall_event", 0)
-        
+
         print(f"{k}:")
         print(f"  ROI por Evento: {roi_event:.1%}")
         print(f"  Precisão por Evento: {precision_event:.1%}")
@@ -1006,14 +999,14 @@ def create_final_summary(
     print("ANÁLISE DE BREAK-EVEN:")
     print("-" * 30)
     print(f"Precisão mínima para break-even: {min_roi:.1%}")
-    print(f"Ratio custo FN/FP: {c_fn/c_fp:.1f}")
+    print(f"Ratio custo FN/FP: {c_fn / c_fp:.1f}")
     print()
-    
+
     for k, v in models_results.items():
         precision_event = v.get("business_metrics_event", {}).get("precision_event", 0)
         roi_event = v.get("business_metrics_event", {}).get("roi_pct", 0)
         status = "OK" if precision_event >= min_roi else "FAIL"
-        
+
         print(f"{k}:")
         print(f"  Precisão: {precision_event:.1%} [{status}]")
         print(f"  ROI: {roi_event:.1%}")
@@ -1027,9 +1020,15 @@ def create_final_summary(
                 "AP": v["ap"],
                 "threshold": float(v["threshold"]),
                 "cost": float(v["cost"]),
-                "roi_event": float(v.get("business_metrics_event", {}).get("roi_pct", 0)),
-                "precision_event": float(v.get("business_metrics_event", {}).get("precision_event", 0)),
-                "recall_event": float(v.get("business_metrics_event", {}).get("recall_event", 0)),
+                "roi_event": float(
+                    v.get("business_metrics_event", {}).get("roi_pct", 0)
+                ),
+                "precision_event": float(
+                    v.get("business_metrics_event", {}).get("precision_event", 0)
+                ),
+                "recall_event": float(
+                    v.get("business_metrics_event", {}).get("recall_event", 0)
+                ),
                 "confusion_matrix": v["confusion_matrix"].tolist(),
             }
             for k, v in models_results.items()
@@ -1100,7 +1099,9 @@ def save_model_and_metrics(
         best_model_data["lgb_model"] = best_model_results.get("lgb_model")
         best_model_data["xgb_calibrator"] = best_model_results.get("xgb_calibrator")
         best_model_data["lgb_calibrator"] = best_model_results.get("lgb_calibrator")
-        print(f"Ensemble salvo com modelos individuais: XGBoost + LightGBM + Calibradores")
+        print(
+            "Ensemble salvo com modelos individuais: XGBoost + LightGBM + Calibradores"
+        )
 
     # Salvar melhor modelo
     model_path = os.path.join(
@@ -1166,7 +1167,6 @@ def save_model_and_metrics(
             "metrics": metrics_path,
         },
     }
-
 
     # Salvar resumo executivo
     executive_path = os.path.join(save_dir, f"{model_name}_executive_{timestamp}.json")

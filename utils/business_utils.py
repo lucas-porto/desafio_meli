@@ -5,10 +5,11 @@ Módulo para métricas de negócio e ROI
 import numpy as np
 import pandas as pd
 import math
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import precision_score, recall_score
 from sklearn.utils.multiclass import unique_labels
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import average_precision_score
+
 
 def cm_safe(y_true, y_pred):
     """
@@ -113,8 +114,8 @@ def business_roi_event_based(
     tp, fn, fp = pair_alerts_and_failures(
         original_df, dates, devices, preds, horizon_days
     )
-    baseline = (tp + fn) * c_fn 
-    with_model = fn * c_fn + fp * c_fp  
+    baseline = (tp + fn) * c_fn
+    with_model = fn * c_fn + fp * c_fp
     roi_abs = baseline - with_model
     roi_pct = 0.0 if baseline == 0 else 1 - with_model / baseline
     precision_event = 0.0 if (tp + fp) == 0 else tp / (tp + fp)
@@ -248,14 +249,13 @@ def break_even_analysis_event_based(models_results, c_fn=100_000, c_fp=25_000):
         print()
 
 
-
 def compare_models(models_results, y_test, use_holdout=False):
     """
     Comparar performance dos modelos (versão simplificada)
     """
     # Escolher qual conjunto de predições usar
     pred_key = "predictions_hold" if use_holdout else "predictions"
-    
+
     # Métricas essenciais apenas
     comparison_df = pd.DataFrame(
         {
